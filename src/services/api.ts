@@ -1,114 +1,4 @@
-// ============================================
-// API Service — Akshar Fast Food Customer
-// ============================================
-
-// Hardcoded data for demonstration when backend is not hosted
-const HARDCODED_MENU: MenuItem[] = [
-    {
-        id: '1',
-        name: 'Paneer Tikka Panini',
-        price: 8.99,
-        category: 'Panini',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: true,
-        color: '#ff9800',
-        comment: 'Spicy paneer with bell peppers',
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '2',
-        name: 'Veggie Paradise Panini',
-        price: 7.49,
-        category: 'Panini',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: false,
-        color: '#4caf50',
-        comment: 'Fresh veggies and pesto',
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '3',
-        name: 'Bombay Masala Sandwich',
-        price: 6.99,
-        category: 'Sandwiches',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: true,
-        color: '#8bc34a',
-        comment: 'Classic street style grill',
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '4',
-        name: 'Cheese Chutney Sandwich',
-        price: 5.99,
-        category: 'Sandwiches',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: false,
-        color: '#cddc39',
-        comment: 'Spicy mint chutney & cheese',
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '5',
-        name: 'Masala Chai',
-        price: 2.49,
-        category: 'Beverages',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: true,
-        color: '#795548',
-        comment: 'Hand-brewed with spices',
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '6',
-        name: 'Cold Coffee',
-        price: 4.99,
-        category: 'Beverages',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: false,
-        color: '#3e2723',
-        comment: 'Creamy and refreshing',
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '7',
-        name: 'Vada Pav',
-        price: 3.99,
-        category: 'Snacks',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: true,
-        color: '#ffc107',
-        comment: 'Spicy potato fritter in a bun',
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '8',
-        name: 'Crispy Samosa (2pcs)',
-        price: 4.49,
-        category: 'Snacks',
-        available: true,
-        veg: true,
-        outOfStock: false,
-        bestseller: false,
-        color: '#e65100',
-        comment: 'Served with tamarind chutney',
-        createdAt: new Date().toISOString()
-    }
-];
+const API_BASE_URL = 'http://localhost:4000/api';
 
 // ---------- Menu ----------
 export interface MenuItem {
@@ -127,20 +17,40 @@ export interface MenuItem {
 
 export const menuApi = {
     list: async (params?: { category?: string; search?: string }) => {
-        // Return hardcoded data for demonstration
-        let items = [...HARDCODED_MENU];
-        if (params?.category) {
-            items = items.filter(i => i.category === params.category);
+        try {
+            const response = await fetch(`${API_BASE_URL}/menu`);
+            if (!response.ok) throw new Error('Failed to fetch menu');
+            const data = await response.json();
+            
+            let items = data.map((item: any) => ({
+                ...item,
+                id: item._id // Map MongoDB's _id to id for frontend
+            }));
+
+            if (params?.category) {
+                items = items.filter((i: MenuItem) => i.category === params.category);
+            }
+            if (params?.search) {
+                const s = params.search.toLowerCase();
+                items = items.filter((i: MenuItem) => i.name.toLowerCase().includes(s) || i.category.toLowerCase().includes(s));
+            }
+            return items;
+        } catch (error) {
+            console.error(error);
+            return [];
         }
-        if (params?.search) {
-            const s = params.search.toLowerCase();
-            items = items.filter(i => i.name.toLowerCase().includes(s) || i.category.toLowerCase().includes(s));
-        }
-        return items;
     },
     getCategories: async () => {
-        const cats = Array.from(new Set(HARDCODED_MENU.map(i => i.category)));
-        return cats;
+        try {
+            const response = await fetch(`${API_BASE_URL}/menu`);
+            if (!response.ok) throw new Error('Failed to fetch categories');
+            const data = await response.json();
+            const cats = Array.from(new Set(data.map((i: any) => i.category))) as string[];
+            return cats;
+        } catch (error) {
+            console.error(error);
+            return [];
+        }
     },
 };
 
@@ -174,15 +84,21 @@ export const ordersApi = {
         orderType: 'Delivery' | 'Pickup';
         items: OrderItem[];
     }) => {
-        const mockOrder: Order = {
-            id: 'mock-' + Date.now(),
-            orderId: 'AK-' + Math.floor(Math.random() * 9000 + 1000),
-            ...data,
-            total: data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-            status: 'Confirmed',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-        return mockOrder;
+        try {
+            const response = await fetch(`${API_BASE_URL}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error('Failed to create order');
+            const result = await response.json();
+            return {
+                ...result,
+                id: result._id // Map MongoDB's _id to id for frontend
+            } as Order;
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
     },
 };
